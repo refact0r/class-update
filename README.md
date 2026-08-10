@@ -1,128 +1,76 @@
+# Discord Class Updater
+
+Discord ships obfuscated CSS class names like `messagesPopoutWrap__432f4`, and the hash on the end changes whenever the underlying code does. Any theme that selects on those classes quietly stops working when that happens.
+
+This action rewrites the outdated class names in your theme files to their current ones, using a changelist of renames. Run it on a schedule and your theme keeps up on its own.
+
 > [!NOTE]
-> fork of [Metro420yt/class-update](https://github.com/Metro420yt/class-update), updated because the action broke:
-> - it ran on `node20`, which github actions has [deprecated](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)
-> - its default changelist (`SyndiShanX/Update-Classes` on github) was deleted, so every run failed with `bad response 404`
->
-> see [changes in this fork](#changes-in-this-fork).
+> Fork of [Metro420yt/class-update](https://github.com/Metro420yt/class-update). The original ran on the now-deprecated `node20`, and its changelist url had gone dead.
 
-## Inputs
-
-Add a step like this to your workflow:
-
-```yml
-- uses: refact0r/class-update@v3
-  with:
-    # folder that has your theme files
-    # Default: themes
-    folder: 'src'
-
-    # file extension to target
-    # Default: css
-    ext: scss
-
-    # url or relative path to a changelist, with old & new class names
-    # on alternating lines
-    # Default: https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
-    diff: './changes.txt'
-```
-
-### Default changelist
-
-[SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes), which moved to codeberg after the github repo was deleted. Note the raw url points at the `pages` branch, which is the repo's default — `main` and `master` don't exist and will 404.
-
-It's the source that keeps a current theme current: of the 853 class names that disappeared from discord over one 30 day window, it had a working rename for 260. The automated alternative that was also tested ([fedeericodl/discord-update-classnames](https://github.com/fedeericodl/discord-update-classnames)) had 0 — its frequent commits track the current build, not the rename map, which gained no usable renames in 60 days. It's still worth knowing about if you ever need to migrate a theme that's been abandoned for years, since it covers ~20k classes the changelist doesn't.
-
-Since there's one source, a changelist that can't be fetched fails the run rather than silently doing nothing.
-
-
-## Outputs
-
-The action provides these outputs:
-
-- `totalChanges`: the total number of classes that were replaced
-
-> For more info on how to use outputs, see ["Context and expression syntax"](https://docs.github.com/en/free-pro-team@latest/actions/reference/context-and-expression-syntax-for-github-actions).
-
-## Examples
-<details>
-<summary><h3>Webhook Trigger</h3></summary>
-
-> <a href="https://github.com/Metro420yt/Discord-comfy/blob/master/.github/workflows/classUpdate.yml" style="color: #919894">🔗 this is a workflow i use for a fork</a>
+## Usage
 
 ```yml
 name: Update Classes
 
 on:
-  workflow_dispatch: # manually trigger
-  repository_dispatch: # trigger by webhook (example below)
-    types: [update_class] # id for webhook to target
+  schedule:
+    - cron: "0 */24 * * *"
+  workflow_dispatch:
 
 jobs:
   classUpdate:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - id: update
         uses: refact0r/class-update@v3
         with:
-          folder: stuff
-          ext: scss
+          folder: src
+          ext: css
 
-      - uses: gha-utilities/sass-build@v0.6.0 #compile scss files
-        if: ${{steps.update.outputs.changed}} #skip if no class changes
-        with:
-          source: ./app.scss
-          destination: ./betterdiscord/main.css
-          outputStyle: expanded
-      - uses: EndBug/add-and-commit@v9
-        if: ${{steps.update.outputs.changed}} #skip if no class changes
+      # only commit if something actually changed
+      - uses: EndBug/add-and-commit@v10
+        if: ${{steps.update.outputs.totalChanges > 0}}
         with:
           default_author: github_actions
           message: "chore: update classes"
           fetch: true
 ```
 
+If your theme is compiled, run the build step between the two, gated on the same `if:`.
 
-This example runs when [SyndiShanX's Changes.txt](https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt) updates, but you can ignore the first step if using a different trigger
+### Inputs
 
-im using [make.com](https://make.com) since they have a free tier and for demonstration purposes
+| input | default | description |
+| --- | --- | --- |
+| `folder` | `themes` | folder holding your theme files, searched recursively |
+| `ext` | `css` | file extension to target |
+| `diff` | [SyndiShanX's changelist](https://codeberg.org/SyndiShanX/Update-Classes) | url or repo-relative path to a changelist |
 
-[make.com blueprint](https://gist.github.com/Metro420yt/a3cc2687adb2313966c2f339bd43d246#file-make-blueprint-json)
-> make sure to set up a schedule, i wouldnt try and make it run more than once per hour to stay under the 1000 operations/month
+### Outputs
 
+| output | description |
+| --- | --- |
+| `totalChanges` | number of class names that were replaced |
+| `changed` | whether any file changed |
 
-- using an rss feed parser, have it check [this feed](https://codeberg.org/SyndiShanX/Update-Classes/rss/branch/pages/Changes.txt) for new items (commits)
-- when a new commit is made, send a POST request to `https://api.github.com/repos/<YOUR_REPO>/dispatches` with this info ([docs](https://docs.github.com/en/webhooks/webhook-events-and-payloads#repository_dispatch))
-  - headers:
-    - Accept: application/vnd.github+json <sub>(might not need, idk)</sub>
-    - Content-Type: application/json
-    - Authorization: `Bearer <YOUR_TOKEN>` (see [here](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#about-personal-access-tokens))
-  - body:
-    - `{"event_type": "<YOUR_DISPATCH_ID>"}`
+## The changelist
 
-</details>
+A changelist is a plain text file of old and new class names on alternating lines:
 
-<!-- <details>
-<summary><h3>CRON Job</h3></summary>  -->
-<!-- TODO -->
-<!-- </details> -->
+```
+messagesPopoutWrap_e8b59c
+messagesPopoutWrap__432f4
+```
 
+The default is [SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes), which moved to Codeberg after the GitHub repo was deleted. Its raw url points at the `pages` branch — that's the repo's default branch, and `main`/`master` don't exist, so they'll 404.
 
----
-## Changes in this fork
+Because it's a history rather than a snapshot, a class can be renamed several times over the years. The action follows each rename to the end of its chain, so a theme that's several updates behind catches up in one run. Class names are matched as whole tokens, so a rename for `content_c9f72d` won't touch `.xcontent_c9f72d`.
 
-- runs on `node24` instead of the deprecated `node20`
-- the dead `SyndiShanX` github changelist is replaced by its [codeberg](https://codeberg.org/SyndiShanX/Update-Classes) home
-- classes are matched as whole tokens, so `.xcontent_c9f72d` is no longer clobbered by a rule for `content_c9f72d`
-- escaped slashes in discord's typography classes (`.text-sm\/medium_cf4812`) are handled — the changelist has 311 of these
-- rename chains are resolved up front, so files get one pass instead of one pass per pair — a run over 79k pairs takes about two seconds
-- malformed pairs (a class name with whitespace) are skipped rather than pasted into a selector
-- a relative `diff` path now resolves against your repo, not the action's own folder
+If the changelist can't be fetched, the run fails rather than silently doing nothing.
 
 ## Credits
->- inspired by [ClassUpdate from Saltssaumure](https://github.com/Saltssaumure/ClassUpdate)
->- changelist maintained by [SyndiShanX](https://codeberg.org/SyndiShanX) ([repo](https://codeberg.org/SyndiShanX/Update-Classes))
->- class map maintained by [fedeericodl](https://github.com/fedeericodl) ([repo](https://github.com/fedeericodl/discord-update-classnames))
->- class name history maintained by [itmesarah](https://github.com/itmesarah) ([repo](itmesarah))
->- README.md based on [EndBug/add-and-commit](https://github.com/EndBug/add-and-commit/blob/v9/README.md)
+
+- inspired by [ClassUpdate from Saltssaumure](https://github.com/Saltssaumure/ClassUpdate)
+- changelist maintained by [SyndiShanX](https://codeberg.org/SyndiShanX)
+- original action by [Metro420yt](https://github.com/Metro420yt)
