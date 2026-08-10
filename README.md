@@ -10,7 +10,7 @@
 Add a step like this to your workflow:
 
 ```yml
-- uses: refact0r/class-update@v2
+- uses: refact0r/class-update@v3
   with:
     # folder that has your theme files
     # Default: themes
@@ -20,27 +20,19 @@ Add a step like this to your workflow:
     # Default: css
     ext: scss
 
-    # one or more (newline or comma separated) urls/relative paths to a changelist.
-    # two formats are accepted:
-    #   - old & new class names on alternating lines (SyndiShanX's Changes.txt)
-    #   - a json object of "oldClass": "newClass"
-    # sources are applied in order, and a source that can't be read is skipped.
-    # Default: the two sources listed below
+    # url or relative path to a changelist, with old & new class names
+    # on alternating lines
+    # Default: https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
     diff: './changes.txt'
 ```
 
-### Default changelists
+### Default changelist
 
-Both are used by default, because they cover different things:
+[SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes), which moved to codeberg after the github repo was deleted. Note the raw url points at the `pages` branch, which is the repo's default — `main` and `master` don't exist and will 404.
 
-| source | format | pairs | covers |
-| --- | --- | --- | --- |
-| [fedeericodl/discord-update-classnames](https://github.com/fedeericodl/discord-update-classnames) (`data` branch) | `classNamesMap.json` | ~40k | names scraped straight from the discord client, rebuilt automatically every couple of hours |
-| [SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes) (codeberg) | `Changes.txt` | ~79k | the hand-maintained rename history going back to 2021, so a theme that's years behind still catches up |
+It's the source that keeps a current theme current: of the 853 class names that disappeared from discord over one 30 day window, it had a working rename for 260. The automated alternative that was also tested ([fedeericodl/discord-update-classnames](https://github.com/fedeericodl/discord-update-classnames)) had 0 — its frequent commits track the current build, not the rename map, which gained no usable renames in 60 days. It's still worth knowing about if you ever need to migrate a theme that's been abandoned for years, since it covers ~20k classes the changelist doesn't.
 
-They overlap on ~19k classes and disagree on the final name for ~2.6k of them, because each stops at a different point in history. Rather than trusting one over the other, every result is followed until it reaches a name neither source renames again — so the two can be listed in any order, and a class only stops moving when it's actually current.
-
-Since one dead source only produces a warning now, the action keeps working if either one goes away.
+Since there's one source, a changelist that can't be fetched fails the run rather than silently doing nothing.
 
 
 ## Outputs
@@ -72,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: update
-        uses: refact0r/class-update@v2
+        uses: refact0r/class-update@v3
         with:
           folder: stuff
           ext: scss
@@ -121,12 +113,11 @@ im using [make.com](https://make.com) since they have a free tier and for demons
 ## Changes in this fork
 
 - runs on `node24` instead of the deprecated `node20`
-- the dead `SyndiShanX` github changelist is replaced by its [codeberg](https://codeberg.org/SyndiShanX/Update-Classes) home, plus an auto-updated second source
-- `diff` takes **multiple sources**, and a source that 404s is a warning instead of a hard failure — the run continues on whatever's left, and only fails if *nothing* can be read
-- pairs whose old or new side is more than one class (eg an element that *gained* a class, `message__9a9f9` -> `message__9a9f9 text-md/medium__9a9f9`) are skipped instead of being pasted into your selector, where they'd silently turn `.message__9a9f9` into a descendant selector and break the rule
+- the dead `SyndiShanX` github changelist is replaced by its [codeberg](https://codeberg.org/SyndiShanX/Update-Classes) home
 - classes are matched as whole tokens, so `.xcontent_c9f72d` is no longer clobbered by a rule for `content_c9f72d`
-- escaped slashes in discord's typography classes (`.text-sm\/medium_cf4812`) are handled
-- rename chains are resolved up front, so files get one pass instead of one pass per pair — with ~118k pairs across both sources a run takes about two seconds
+- escaped slashes in discord's typography classes (`.text-sm\/medium_cf4812`) are handled — the changelist has 311 of these
+- rename chains are resolved up front, so files get one pass instead of one pass per pair — a run over 79k pairs takes about two seconds
+- malformed pairs (a class name with whitespace) are skipped rather than pasted into a selector
 - a relative `diff` path now resolves against your repo, not the action's own folder
 
 ## Credits

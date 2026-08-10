@@ -12,13 +12,8 @@ inputs:
     description: file extension to target
     default: css
   diff:
-    description: >-
-      one or more (newline or comma separated) urls/relative paths to a changes file
-      (old&new class names on alternating lines) or a class map (json object of old->new).
-      sources are applied in order, and a source that cant be read is skipped
-    default: |
-      https://raw.githubusercontent.com/fedeericodl/discord-update-classnames/data/classNamesMap.json
-      https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
+    description: url or relative path to a changelist, with old & new class names on alternating lines
+    default: https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
 
 outputs:
   changed:
