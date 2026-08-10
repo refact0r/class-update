@@ -9,8 +9,8 @@ const options = {
     folder: 'themes',
     ext: 'css',
     diff: [
-        'https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt',
-        'https://raw.githubusercontent.com/fedeericodl/discord-update-classnames/data/classNamesMap.json'
+        'https://raw.githubusercontent.com/fedeericodl/discord-update-classnames/data/classNamesMap.json',
+        'https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt'
     ].join('\n')
 } satisfies Record<string, string>
 
@@ -157,9 +157,21 @@ function compose(raw: Array<[string, string]>): Map<string, string> {
         else byCurrent.set(newClass, origs)
     }
 
-    // a chain can lead back to where it started (a -> b -> a)
+    // the sources overlap but stop at different points in history, so one can hand back a
+    // name the other still renames. following every result to a name nobody renames again
+    // picks up those extra hops, and means the sources dont have to be listed in any
+    // particular order to get the newest name
     for (const [oldClass, newClass] of final) {
-        if (oldClass === newClass) final.delete(oldClass)
+        const seen = new Set([oldClass])
+        var current = newClass
+        while (final.has(current) && !seen.has(current)) {
+            seen.add(current)
+            current = final.get(current)!
+        }
+
+        // a chain can lead back to where it started (a -> b -> a)
+        if (current === oldClass) final.delete(oldClass)
+        else final.set(oldClass, current)
     }
 
     return final

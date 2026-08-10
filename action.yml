@@ -17,8 +17,8 @@ inputs:
       (old&new class names on alternating lines) or a class map (json object of old->new).
       sources are applied in order, and a source that cant be read is skipped
     default: |
-      https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
       https://raw.githubusercontent.com/fedeericodl/discord-update-classnames/data/classNamesMap.json
+      https://codeberg.org/SyndiShanX/Update-Classes/raw/branch/pages/Changes.txt
 
 outputs:
   changed:

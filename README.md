@@ -31,12 +31,14 @@ Add a step like this to your workflow:
 
 ### Default changelists
 
-Both are used by default, in this order, because they cover different things:
+Both are used by default, because they cover different things:
 
-| source | format | covers |
-| --- | --- | --- |
-| [SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes) (codeberg) | `Changes.txt` | the full rename history, so a theme that's years behind still catches up |
-| [fedeericodl/discord-update-classnames](https://github.com/fedeericodl/discord-update-classnames) (`data` branch) | `classNamesMap.json` | current names, scraped from the discord client and updated automatically every couple hours |
+| source | format | pairs | covers |
+| --- | --- | --- | --- |
+| [fedeericodl/discord-update-classnames](https://github.com/fedeericodl/discord-update-classnames) (`data` branch) | `classNamesMap.json` | ~40k | names scraped straight from the discord client, rebuilt automatically every couple of hours |
+| [SyndiShanX/Update-Classes](https://codeberg.org/SyndiShanX/Update-Classes) (codeberg) | `Changes.txt` | ~79k | the hand-maintained rename history going back to 2021, so a theme that's years behind still catches up |
+
+They overlap on ~19k classes and disagree on the final name for ~2.6k of them, because each stops at a different point in history. Rather than trusting one over the other, every result is followed until it reaches a name neither source renames again — so the two can be listed in any order, and a class only stops moving when it's actually current.
 
 Since one dead source only produces a warning now, the action keeps working if either one goes away.
 
